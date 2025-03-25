@@ -6,20 +6,20 @@
 requires_brightening
     :-  target_illuminance(Target) 
         & current_illuminance(Current)
-        & Target  > Current
+        & Target - 100 > Current
     .
 
 // Inference rule for inferring the belief requires_darkening if the target illuminance is lower than the current illuminance
 requires_darkening
     :-  target_illuminance(Target)  
         & current_illuminance(Current)
-        & Target < Current
+        & Target + 100 < Current
     .
 
 /* Initial beliefs */
 
 // The agent believes that the target illuminance is 400 lux
-target_illuminance(400).
+target_illuminance(350).
 
 /* Initial goals */
 
@@ -51,6 +51,7 @@ target_illuminance(400).
 +!manage_illuminance
     :   lights("off")
         & requires_brightening
+        & not weather("sunny")
     <-
         .print("Turning on the lights");
         turnOnLights; // performs the action of turning on the lights
@@ -80,7 +81,8 @@ target_illuminance(400).
 @increase_illuminance_with_blinds_plan
 +!manage_illuminance
     :   blinds("lowered")
-        &  requires_brightening
+        & requires_brightening
+        & weather("sunny")
     <-
         .print("Raising the blinds");
         raiseBlinds; // performs the action of raising the blinds
@@ -100,6 +102,18 @@ target_illuminance(400).
         .print("Lowering the blinds");
         lowerBlinds; // performs the action of lowering the blinds
     .
+
+/*
+ * Plan for closing the blinds, if the weather is no longer sunny (the belief weather("sunny") is removed)
+ */
+@close_blinds_plan
+-weather("sunny")
+    : blinds("raised")
+    <-
+        .print("Closing the blinds");
+        lowerBlinds; // performs the action of lowering the blinds
+    .
+
 /* 
  * Plan for reacting to the addition of the belief current_illuminance(Current)
  * Triggering event: addition of belief current_illuminance(Current)
@@ -150,6 +164,20 @@ target_illuminance(400).
     : true
     <- 
         .print("The lights are ", State);
+    .
+
+/*
+ * Plan if the current illuminance is equal to the target illuminance
+ * Print that the goal has been achieved
+ */
+@goal_achieved_plan
++!manage_illuminance
+    :   current_illuminance(Current)
+        & target_illuminance(Target)
+        & Current >= Target - 100
+        & Current <= Target + 100
+    <-
+        .print("Goal achieved: Current illuminance is close to the target illuminance");
     .
 
 /* Import behavior of agents that work in CArtAgO environments */
